@@ -57,6 +57,19 @@ Status BlockCacheTier::Open() {
     }
   }
 
+  // Create base/<table_cache dir> directory
+  status = opt_.env->CreateDir(GetTableCachePath());
+  if (!status.ok()) {
+    // directory already exists, clean it up
+    status = CleanupCacheFolder(GetTableCachePath());
+    assert(status.ok());
+    if (!status.ok()) {
+      Error(opt_.log, "Error creating directory %s. %s", opt_.path.c_str(),
+            status.ToString().c_str());
+      return status;
+    }
+  }
+
   // create a new file
   assert(!cache_file_);
   status = NewCacheFile();
@@ -67,6 +80,17 @@ Status BlockCacheTier::Open() {
   }
 
   assert(cache_file_);
+
+  // create a new table_cache file
+  assert(!table_cache_file_);
+  status = NewTableCacheFile();
+  if (!status.ok()) {
+    Error(opt_.log, "Error creating new file %s. %s", opt_.path.c_str(),
+          status.ToString().c_str());
+    return status;
+  }
+
+  assert(table_cache_file_);
 
   if (opt_.pipeline_writes) {
     assert(!insert_th_.joinable());
@@ -126,10 +150,12 @@ Status BlockCacheTier::Close() {
 
   // stop the writer before
   writer_.Stop();
+  table_writer_.Stop();
 
   // clear all metadata
   WriteLock _(&lock_);
   metadata_.Clear();
+  table_metadata_.Clear();
   return Status::OK();
 }
 
@@ -172,19 +198,19 @@ PersistentCache::StatsType BlockCacheTier::Stats() {
 }
 
 Status BlockCacheTier::Insert(const Slice& key, const char* data,
-                              const size_t size) {
+                              const size_t size, bool is_meta_block) {
   // update stats
   stats_.bytes_pipelined_.Add(size);
 
   if (opt_.pipeline_writes) {
     // off load the write to the write thread
     insert_ops_.Push(
-        InsertOp(key.ToString(), std::move(std::string(data, size))));
+        InsertOp(key.ToString(), std::move(std::string(data, size)),is_meta_block));
     return Status::OK();
   }
 
   assert(!opt_.pipeline_writes);
-  return InsertImpl(key, Slice(data, size));
+  return InsertImpl(key, Slice(data, size),is_meta_block);
 }
 
 void BlockCacheTier::InsertMain() {
@@ -198,7 +224,7 @@ void BlockCacheTier::InsertMain() {
 
     size_t retry = 0;
     Status s;
-    while ((s = InsertImpl(Slice(op.key_), Slice(op.data_))).IsTryAgain()) {
+    while ((s = InsertImpl(Slice(op.key_), Slice(op.data_),op.is_meta_block_)).IsTryAgain()) {
       if (retry > kMaxRetry) {
         break;
       }
@@ -216,7 +242,7 @@ void BlockCacheTier::InsertMain() {
   }
 }
 
-Status BlockCacheTier::InsertImpl(const Slice& key, const Slice& data) {
+Status BlockCacheTier::InsertImpl(const Slice& key, const Slice& data,bool is_meta_block) {
   // pre-condition
   assert(key.size());
   assert(data.size());
@@ -226,99 +252,231 @@ Status BlockCacheTier::InsertImpl(const Slice& key, const Slice& data) {
 
   WriteLock _(&lock_);
 
-  LBA lba;
-  if (metadata_.Lookup(key, &lba)) {
-    // the key already exists, this is duplicate insert
+  if (!is_meta_block) {
+    LBA lba;
+    if (metadata_.Lookup(key, &lba)) {
+      // the key already exists, this is duplicate insert
+      return Status::OK();
+    }
+
+    while (!cache_file_->Append(key, data, &lba)) {
+      if (!cache_file_->Eof()) {
+        ROCKS_LOG_DEBUG(opt_.log, "Error inserting to cache file %d",
+                        cache_file_->cacheid());
+        stats_.write_latency_.Add(timer.ElapsedNanos() / 1000);
+        return Status::TryAgain();
+      }
+
+      assert(cache_file_->Eof());
+      Status status = NewCacheFile();
+      if (!status.ok()) {
+        return status;
+      }
+    }
+
+    // Insert into lookup index
+    BlockInfo* info = metadata_.Insert(key, lba);
+    assert(info);
+    if (!info) {
+      return Status::IOError("Unexpected error inserting to index");
+    }
+
+    // insert to cache file reverse mapping
+    cache_file_->Add(info);
+
+    // update stats
+    stats_.bytes_written_.Add(data.size());
+    stats_.write_latency_.Add(timer.ElapsedNanos() / 1000);
+    return Status::OK();
+  } else {
+    printf("key.size==%ld    data.size==%ld\n",key.size(),data.size());
+    LBA lba;
+    if (table_metadata_.Lookup(key, &lba)) {
+      // the key already exists, this is duplicate insert
+      return Status::OK();
+    }
+    while (!table_cache_file_->Append(key, data, &lba)) {
+      if (!table_cache_file_->Eof()) {
+        ROCKS_LOG_DEBUG(opt_.log, "Error inserting to cache file %d",
+                        table_cache_file_->cacheid());
+        stats_.write_latency_.Add(timer.ElapsedNanos() / 1000);
+        return Status::TryAgain();
+      }
+
+      assert(table_cache_file_->Eof());
+      Status status = NewTableCacheFile();
+      if (!status.ok()) {
+        return status;
+      }
+    }
+
+    // Insert into lookup index
+    BlockInfo* info = table_metadata_.Insert(key, lba);
+    assert(info);
+    if (!info) {
+      return Status::IOError("Unexpected error inserting to index");
+    }
+
+    // insert to cache file reverse mapping
+    table_cache_file_->Add(info);
+
+    // update stats
+    stats_.bytes_written_.Add(data.size());
+    stats_.write_latency_.Add(timer.ElapsedNanos() / 1000);
     return Status::OK();
   }
-
-  while (!cache_file_->Append(key, data, &lba)) {
-    if (!cache_file_->Eof()) {
-      ROCKS_LOG_DEBUG(opt_.log, "Error inserting to cache file %d",
-                      cache_file_->cacheid());
-      stats_.write_latency_.Add(timer.ElapsedNanos() / 1000);
-      return Status::TryAgain();
-    }
-
-    assert(cache_file_->Eof());
-    Status status = NewCacheFile();
-    if (!status.ok()) {
-      return status;
-    }
-  }
-
-  // Insert into lookup index
-  BlockInfo* info = metadata_.Insert(key, lba);
-  assert(info);
-  if (!info) {
-    return Status::IOError("Unexpected error inserting to index");
-  }
-
-  // insert to cache file reverse mapping
-  cache_file_->Add(info);
-
-  // update stats
-  stats_.bytes_written_.Add(data.size());
-  stats_.write_latency_.Add(timer.ElapsedNanos() / 1000);
-  return Status::OK();
 }
 
 Status BlockCacheTier::Lookup(const Slice& key, std::unique_ptr<char[]>* val,
                               size_t* size) {
-  StopWatchNano timer(opt_.env, /*auto_start=*/ true);
+  StopWatchNano timer(opt_.env, /*auto_start=*/true);
+
+  bool find_in_meta_block = false;
 
   LBA lba;
   bool status;
-  status = metadata_.Lookup(key, &lba);
+  status = table_metadata_.Lookup(key, &lba);
   if (!status) {
-    stats_.cache_misses_++;
-    stats_.read_miss_latency_.Add(timer.ElapsedNanos() / 1000);
-    return Status::NotFound("blockcache: key not found");
+    bool status2;
+    status2 = metadata_.Lookup(key, &lba);
+    if (!status2) {
+      stats_.cache_misses_++;
+      stats_.read_miss_latency_.Add(timer.ElapsedNanos() / 1000);
+      //printf("lookup failed1\n");
+      return Status::NotFound("blockcache: key not found");
+    } else {
+      find_in_meta_block = false;
+    }
+  } else {
+    //printf("get in meta_block\n");
+    find_in_meta_block = true;
   }
+  if (!find_in_meta_block) {
+    BlockCacheFile* const file = metadata_.Lookup(lba.cache_id_);
+    if (!file) {
+      // this can happen because the block index and cache file index are
+      // different, and the cache file might be removed between the two lookups
+      stats_.cache_misses_++;
+      stats_.read_miss_latency_.Add(timer.ElapsedNanos() / 1000);
+      return Status::NotFound("blockcache: cache file not found");
+    }
 
-  BlockCacheFile* const file = metadata_.Lookup(lba.cache_id_);
-  if (!file) {
-    // this can happen because the block index and cache file index are
-    // different, and the cache file might be removed between the two lookups
-    stats_.cache_misses_++;
-    stats_.read_miss_latency_.Add(timer.ElapsedNanos() / 1000);
-    return Status::NotFound("blockcache: cache file not found");
+    assert(file->refs_);
+
+    std::unique_ptr<char[]> scratch(new char[lba.size_]);
+    Slice blk_key;
+    Slice blk_val;
+
+    status = file->Read(lba, &blk_key, &blk_val, scratch.get());
+    --file->refs_;
+    if (!status) {
+      stats_.cache_misses_++;
+      stats_.cache_errors_++;
+      stats_.read_miss_latency_.Add(timer.ElapsedNanos() / 1000);
+      return Status::NotFound("blockcache: error reading data");
+    }
+
+    assert(blk_key == key);
+
+    val->reset(new char[blk_val.size()]);
+    memcpy(val->get(), blk_val.data(), blk_val.size());
+    *size = blk_val.size();
+
+    stats_.bytes_read_.Add(*size);
+    stats_.cache_hits_++;
+    stats_.read_hit_latency_.Add(timer.ElapsedNanos() / 1000);
+    //printf("lookup get in data block\n");
+    return Status::OK();
+  } else {
+    BlockCacheFile* const file = table_metadata_.Lookup(lba.cache_id_);
+    if (!file) {
+      // this can happen because the block index and cache file index are
+      // different, and the cache file might be removed between the two lookups
+      stats_.cache_misses_++;
+      stats_.read_miss_latency_.Add(timer.ElapsedNanos() / 1000);
+      return Status::NotFound("blockcache: cache file not found");
+    }
+
+    assert(file->refs_);
+
+    std::unique_ptr<char[]> scratch(new char[lba.size_]);
+    Slice blk_key;
+    Slice blk_val;
+
+    status = file->Read(lba, &blk_key, &blk_val, scratch.get());
+    --file->refs_;
+    if (!status) {
+      stats_.cache_misses_++;
+      stats_.cache_errors_++;
+      stats_.read_miss_latency_.Add(timer.ElapsedNanos() / 1000);
+      return Status::NotFound("blockcache: error reading data");
+    }
+
+    assert(blk_key == key);
+
+    val->reset(new char[blk_val.size()]);
+    memcpy(val->get(), blk_val.data(), blk_val.size());
+    *size = blk_val.size();
+
+    stats_.bytes_read_.Add(*size);
+    stats_.cache_hits_++;
+    stats_.read_hit_latency_.Add(timer.ElapsedNanos() / 1000);
+    return Status::OK();
   }
-
-  assert(file->refs_);
-
-  std::unique_ptr<char[]> scratch(new char[lba.size_]);
-  Slice blk_key;
-  Slice blk_val;
-
-  status = file->Read(lba, &blk_key, &blk_val, scratch.get());
-  --file->refs_;
-  if (!status) {
-    stats_.cache_misses_++;
-    stats_.cache_errors_++;
-    stats_.read_miss_latency_.Add(timer.ElapsedNanos() / 1000);
-    return Status::NotFound("blockcache: error reading data");
-  }
-
-  assert(blk_key == key);
-
-  val->reset(new char[blk_val.size()]);
-  memcpy(val->get(), blk_val.data(), blk_val.size());
-  *size = blk_val.size();
-
-  stats_.bytes_read_.Add(*size);
-  stats_.cache_hits_++;
-  stats_.read_hit_latency_.Add(timer.ElapsedNanos() / 1000);
-
-  return Status::OK();
 }
 
 bool BlockCacheTier::Erase(const Slice& key) {
   WriteLock _(&lock_);
-  BlockInfo* info = metadata_.Remove(key);
-  assert(info);
-  delete info;
+  LBA lba;
+  bool status;
+  status=metadata_.Lookup(key,&lba);
+  if(status)
+  {
+    BlockInfo* info = metadata_.Remove(key);
+    assert(info);
+    delete info;
+  }
+  status=table_metadata_.Lookup(key,&lba);
+  if(status)
+  {
+    BlockInfo* info = table_metadata_.Remove(key);
+    assert(info);
+    delete info;
+  }
+  
   return true;
+}
+
+Status BlockCacheTier::NewTableCacheFile() {
+  lock_.AssertHeld();
+
+  TEST_SYNC_POINT_CALLBACK("BlockCacheTier::NewTableCacheFile:DeleteDir",
+                           (void*)(GetTableCachePath().c_str()));
+
+  std::unique_ptr<WriteableCacheFile> f(new WriteableCacheFile(
+      opt_.env, &table_buffer_allocator_, &table_writer_, GetTableCachePath(),
+      table_writer_cache_id_, opt_.cache_file_size, opt_.log));
+  
+
+  bool status = f->Create(opt_.enable_direct_writes, opt_.enable_direct_reads);
+  if (!status) {
+    return Status::IOError("Error creating file");
+  }
+
+  Info(opt_.log, "Created cache file %d", table_writer_cache_id_);
+
+  table_writer_cache_id_++;
+  table_cache_file_ = f.release();
+
+  // insert to cache files tree
+  status = table_metadata_.Insert(table_cache_file_);
+  assert(status);
+  if (!status) {
+    Error(opt_.log, "Error inserting to metadata");
+    return Status::IOError("Error inserting to metadata");
+  }
+
+  return Status::OK();
 }
 
 Status BlockCacheTier::NewCacheFile() {
@@ -353,41 +511,47 @@ Status BlockCacheTier::NewCacheFile() {
   return Status::OK();
 }
 
-bool BlockCacheTier::Reserve(const size_t size) {
+bool BlockCacheTier::Reserve(const size_t size,bool is_meta_block) {
   WriteLock _(&lock_);
-  assert(size_ <= opt_.cache_size);
 
-  if (size + size_ <= opt_.cache_size) {
-    // there is enough space to write
+  if (!is_meta_block) {
+    assert(size_ <= opt_.cache_size);
+
+    if (size + size_ <= opt_.cache_size) {
+      // there is enough space to write
+      size_ += size;
+      return true;
+    }
+
+    assert(size + size_ >= opt_.cache_size);
+    // there is not enough space to fit the requested data
+    // we can clear some space by evicting cold data
+
+    const double retain_fac = (100 - kEvictPct) / static_cast<double>(100);
+    while (size + size_ > opt_.cache_size * retain_fac) {
+      std::unique_ptr<BlockCacheFile> f(metadata_.Evict());
+      if (!f) {
+        // nothing is evictable
+        return false;
+      }
+      assert(!f->refs_);
+      uint64_t file_size;
+      if (!f->Delete(&file_size).ok()) {
+        // unable to delete file
+        return false;
+      }
+
+      assert(file_size <= size_);
+      size_ -= file_size;
+    }
+
     size_ += size;
+    assert(size_ <= opt_.cache_size * 0.9);
+    return true;
+  } else {
+    table_size_ += size;
     return true;
   }
-
-  assert(size + size_ >= opt_.cache_size);
-  // there is not enough space to fit the requested data
-  // we can clear some space by evicting cold data
-
-  const double retain_fac = (100 - kEvictPct) / static_cast<double>(100);
-  while (size + size_ > opt_.cache_size * retain_fac) {
-    std::unique_ptr<BlockCacheFile> f(metadata_.Evict());
-    if (!f) {
-      // nothing is evictable
-      return false;
-    }
-    assert(!f->refs_);
-    uint64_t file_size;
-    if (!f->Delete(&file_size).ok()) {
-      // unable to delete file
-      return false;
-    }
-
-    assert(file_size <= size_);
-    size_ -= file_size;
-  }
-
-  size_ += size;
-  assert(size_ <= opt_.cache_size * 0.9);
-  return true;
 }
 
 Status NewPersistentCache(Env* const env, const std::string& path,

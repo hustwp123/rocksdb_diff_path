@@ -197,7 +197,20 @@ class CacheTierBenchmark {
     // insert
     StopWatchNano timer(Env::Default(), /*auto_start=*/true);
     while (true) {
-      Status status = cache_->Insert(block_key, block.get(), FLAGS_iosize);
+      Status status; 
+      //status= cache_->Insert(block_key, block.get(), FLAGS_iosize);
+      //status= cache_->Insert(block_key, block.get(), FLAGS_iosize,true);
+      int a;
+      srand((unsigned)time(NULL));
+      a = rand();
+      if(a%2)
+      {
+        status= cache_->Insert(block_key, block.get(), FLAGS_iosize,true);
+      }
+      else
+      {
+        status= cache_->Insert(block_key, block.get(), FLAGS_iosize);
+      }
       if (status.ok()) {
         break;
       }

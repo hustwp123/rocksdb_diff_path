@@ -39,7 +39,7 @@ PersistentCache::StatsType VolatileCacheTier::Stats() {
 }
 
 Status VolatileCacheTier::Insert(const Slice& page_key, const char* data,
-                                 const size_t size) {
+                                 const size_t size,bool) {
   // precondition
   assert(data);
   assert(size);
