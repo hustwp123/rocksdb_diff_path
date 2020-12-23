@@ -289,7 +289,7 @@ Status BlockCacheTier::InsertImpl(const Slice& key, const Slice& data,bool is_me
     stats_.write_latency_.Add(timer.ElapsedNanos() / 1000);
     return Status::OK();
   } else {
-    printf("key.size==%ld    data.size==%ld\n",key.size(),data.size());
+    //printf("key.size==%ld    data.size==%ld\n",key.size(),data.size());
     LBA lba;
     if (table_metadata_.Lookup(key, &lba)) {
       // the key already exists, this is duplicate insert
