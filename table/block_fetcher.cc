@@ -156,6 +156,7 @@ inline void BlockFetcher::InsertCompressedBlockToPersistentCacheIfNeeded(bool is
 }
 
 inline void BlockFetcher::InsertUncompressedBlockToPersistentCacheIfNeeded(bool is_meta_block) {
+  if(is_meta_block) {} //xp, touch this parameter
   if (status_.ok() && !got_from_prefetch_buffer_ && read_options_.fill_cache &&
       cache_options_.persistent_cache &&
       !cache_options_.persistent_cache->IsCompressed()) {

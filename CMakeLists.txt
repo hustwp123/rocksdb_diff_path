@@ -38,6 +38,15 @@ enable_language(CXX)
 enable_language(C)
 enable_language(ASM)
 
+#xp
+find_package(Boost 1.42.0 COMPONENTS unit_test_framework iostreams system thread filesystem REQUIRED)
+include_directories(${Boost_INCLUDE_DIRS})
+link_directories (${Boost_LIBRARY_DIRS})
+include_directories("utilities/ot")
+include_directories("utilities/ot/succinct")
+include_directories("utilities/ot/tries")
+include_directories("utilities/ot/repair")
+
 if(POLICY CMP0042)
   cmake_policy(SET CMP0042 NEW)
 endif()
@@ -188,7 +197,7 @@ if(MSVC)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Zi /nologo /EHsc /GS /Gd /GR /GF /fp:precise /Zc:wchar_t /Zc:forScope /errorReport:queue")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /FC /d2Zi+ /W4 /wd4127 /wd4800 /wd4996 /wd4351 /wd4100 /wd4204 /wd4324")
 else()
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W -Wextra -Wall")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W -Wextra -Wall") #xp, add -fPIC
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wsign-compare -Wshadow -Wno-unused-parameter -Wno-unused-variable -Woverloaded-virtual -Wnon-virtual-dtor -Wno-missing-field-initializers -Wno-strict-aliasing")
   if(MINGW)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-format")
@@ -657,6 +666,7 @@ set(SOURCES
         util/filter_policy.cc
         util/hash.cc
         util/murmurhash.cc
+        util/pdt.cc
         util/random.cc
         util/rate_limiter.cc
         util/slice.cc
@@ -694,6 +704,8 @@ set(SOURCES
         utilities/object_registry.cc
         utilities/option_change_migration/option_change_migration.cc
         utilities/options/options_util.cc
+        utilities/ot/succinct/bp_vector.cpp # xp
+        utilities/pdt/balanced_parentheses_vector.cpp
         utilities/persistent_cache/block_cache_tier.cc
         utilities/persistent_cache/block_cache_tier_file.cc
         utilities/persistent_cache/block_cache_tier_metadata.cc
@@ -784,7 +796,12 @@ else()
 
   add_library(${ROCKSDB_SHARED_LIB} SHARED ${SOURCES})
   target_link_libraries(${ROCKSDB_SHARED_LIB}
-    ${THIRDPARTY_LIBS} ${SYSTEM_LIBS})
+          ${THIRDPARTY_LIBS} ${SYSTEM_LIBS}
+          ${Boost_FILESYSTEM_LIBRARY} #xp
+          ${Boost_SYSTEM_LIBRARY}
+          ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
+          ${Boost_LIBRARIES}
+          )
   set_target_properties(${ROCKSDB_SHARED_LIB} PROPERTIES
                         LINKER_LANGUAGE CXX
                         VERSION ${ROCKSDB_VERSION}
@@ -795,11 +812,16 @@ endif()
 
 add_library(${ROCKSDB_STATIC_LIB} STATIC ${SOURCES})
 target_link_libraries(${ROCKSDB_STATIC_LIB}
-  ${THIRDPARTY_LIBS} ${SYSTEM_LIBS})
+        ${THIRDPARTY_LIBS} ${SYSTEM_LIBS}
+        ${Boost_FILESYSTEM_LIBRARY} #xp
+        ${Boost_SYSTEM_LIBRARY}
+        ${Boost_LIBRARIES}
+        ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
 
 if(WIN32)
   add_library(${ROCKSDB_IMPORT_LIB} SHARED ${SOURCES})
   target_link_libraries(${ROCKSDB_IMPORT_LIB}
+    ${Boost_LIBRARIES} #xp
     ${THIRDPARTY_LIBS} ${SYSTEM_LIBS})
   set_target_properties(${ROCKSDB_IMPORT_LIB} PROPERTIES
     COMPILE_DEFINITIONS "ROCKSDB_DLL;ROCKSDB_LIBRARY_EXPORTS")
@@ -1004,6 +1026,8 @@ if(WITH_TESTS)
         util/rate_limiter_test.cc
         util/repeatable_thread_test.cc
         util/slice_transform_test.cc
+        util/test_pdt.cc
+        util/test_pdt_filter_policy.cc
         util/timer_queue_test.cc
         util/thread_list_test.cc
         util/thread_local_test.cc
@@ -1019,6 +1043,15 @@ if(WITH_TESTS)
         utilities/object_registry_test.cc
         utilities/option_change_migration/option_change_migration_test.cc
         utilities/options/options_util_test.cc
+        utilities/pdt/test_bit_vector.cpp
+        utilities/pdt/test_bp_vector.cpp
+        utilities/pdt/test_bp_vector_encode_decode.cpp
+        utilities/pdt/test_path_decomposed_trie.cpp
+        utilities/pdt/test_pdt_search.cpp
+        utilities/pdt/test_varint_encode.cpp
+        utilities/ot/tries/ot_test_path_decomposed_trie.cpp #xp
+        utilities/ot/tries/ot_trie_stats.cpp
+#        utilities/ot/succinct/rs_bit_vector.cpp
         utilities/persistent_cache/hash_table_test.cc
         utilities/persistent_cache/persistent_cache_test.cc
         utilities/simulator_cache/cache_simulator_test.cc
@@ -1047,7 +1080,11 @@ if(WITH_TESTS)
     get_filename_component(exename ${sourcefile} NAME_WE)
     add_executable(${exename}${ARTIFACT_SUFFIX} ${sourcefile}
       $<TARGET_OBJECTS:testharness>)
-    target_link_libraries(${exename}${ARTIFACT_SUFFIX} gtest ${LIBS})
+    target_link_libraries(${exename}${ARTIFACT_SUFFIX} gtest ${LIBS}
+            ${Boost_FILESYSTEM_LIBRARY} #xp
+            ${Boost_SYSTEM_LIBRARY}
+            ${Boost_LIBRARIES}
+            ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
   endforeach(sourcefile ${BENCHMARKS})
 
   # For test util library that is build only in DEBUG mode
@@ -1064,6 +1101,11 @@ if(WITH_TESTS)
   add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND})
   set(TESTUTILLIB testutillib${ARTIFACT_SUFFIX})
   add_library(${TESTUTILLIB} STATIC ${TESTUTIL_SOURCE})
+  target_link_libraries(${TESTUTILLIB} ${LIBS}
+          ${Boost_FILESYSTEM_LIBRARY} #xp
+          ${Boost_LIBRARIES}
+          ${Boost_SYSTEM_LIBRARY}
+          ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
   if(MSVC)
     set_target_properties(${TESTUTILLIB} PROPERTIES COMPILE_FLAGS "/Fd${CMAKE_CFG_INTDIR}/testutillib${ARTIFACT_SUFFIX}.pdb")
   endif()
@@ -1086,7 +1128,11 @@ if(WITH_TESTS)
         EXCLUDE_FROM_DEFAULT_BUILD_RELWITHDEBINFO 1
         OUTPUT_NAME ${exename}${ARTIFACT_SUFFIX}
         )
-      target_link_libraries(${CMAKE_PROJECT_NAME}_${exename}${ARTIFACT_SUFFIX} testutillib${ARTIFACT_SUFFIX} gtest ${LIBS})
+      target_link_libraries(${CMAKE_PROJECT_NAME}_${exename}${ARTIFACT_SUFFIX} testutillib${ARTIFACT_SUFFIX} gtest ${LIBS}
+              ${Boost_FILESYSTEM_LIBRARY} #xp
+              ${Boost_SYSTEM_LIBRARY}
+              ${Boost_LIBRARIES}
+              ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
       if(NOT "${exename}" MATCHES "db_sanity_test")
         add_test(NAME ${exename} COMMAND ${exename}${ARTIFACT_SUFFIX})
         add_dependencies(check ${CMAKE_PROJECT_NAME}_${exename}${ARTIFACT_SUFFIX})
@@ -1106,7 +1152,11 @@ if(WITH_TESTS)
         EXCLUDE_FROM_DEFAULT_BUILD_MINRELEASE 1
         EXCLUDE_FROM_DEFAULT_BUILD_RELWITHDEBINFO 1
         )
-      target_link_libraries(${exename}${ARTIFACT_SUFFIX} ${ROCKSDB_IMPORT_LIB} testutillib${ARTIFACT_SUFFIX})
+      target_link_libraries(${exename}${ARTIFACT_SUFFIX} ${ROCKSDB_IMPORT_LIB} testutillib${ARTIFACT_SUFFIX}
+              ${Boost_FILESYSTEM_LIBRARY} #xp
+              ${Boost_SYSTEM_LIBRARY}
+              ${Boost_LIBRARIES}
+              ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
       add_test(NAME ${exename} COMMAND ${exename}${ARTIFACT_SUFFIX})
       add_dependencies(check ${exename}${ARTIFACT_SUFFIX})
   endforeach(sourcefile ${C_TEST_EXES})
