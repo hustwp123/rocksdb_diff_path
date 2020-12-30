@@ -520,6 +520,7 @@ std::string ParseBlockBasedTableOption(const std::string& name,
           ParseInt(trim(value.substr(kName.size(), pos - kName.size())));
       bool use_block_based_builder =
           ParseBoolean("use_block_based_builder", trim(value.substr(pos + 1)));
+          printf("\n\n\n\nbefore NewBloomFilterPolicy use_block_based_builder=%d\n",use_block_based_builder);
       new_options->filter_policy.reset(
           NewBloomFilterPolicy(bits_per_key, use_block_based_builder));
       return "";

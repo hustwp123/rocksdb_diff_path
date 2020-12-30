@@ -70,10 +70,13 @@ FilterBlockBuilder* CreateFilterBlockBuilder(
   FilterBitsBuilder* filter_bits_builder =
       table_opt.filter_policy->GetFilterBitsBuilder();
   if (filter_bits_builder == nullptr) {
+    printf("filter_bits_builder=null\n");
     return new BlockBasedFilterBlockBuilder(mopt.prefix_extractor.get(),
                                             table_opt);
   } else {
+    printf("filter_bits_builder not null\n");
     if (table_opt.partition_filters) {
+      printf("partition_filters\n");
       assert(p_index_builder != nullptr);
       // Since after partition cut request from filter builder it takes time
       // until index builder actully cuts the partition, we take the lower bound
@@ -90,6 +93,7 @@ FilterBlockBuilder* CreateFilterBlockBuilder(
           filter_bits_builder, table_opt.index_block_restart_interval,
           use_delta_encoding_for_index_values, p_index_builder, partition_size);
     } else {
+      printf("FullFilterBlockBuilder\n");
       return new FullFilterBlockBuilder(mopt.prefix_extractor.get(),
                                         table_opt.whole_key_filtering,
                                         filter_bits_builder);
@@ -404,6 +408,7 @@ struct BlockBasedTableBuilder::Rep {
         oldest_key_time(_oldest_key_time),
         target_file_size(_target_file_size),
         file_creation_time(_file_creation_time) {
+          printf("\n\n\nin Rep()\n");
     if (table_options.index_type ==
         BlockBasedTableOptions::kTwoLevelIndexSearch) {
       p_index_builder_ = PartitionedIndexBuilder::CreateIndexBuilder(
@@ -1187,6 +1192,8 @@ TableProperties BlockBasedTableBuilder::GetTableProperties() const {
   }
   return ret;
 }
+
+const std::string BlockBasedTable::kOtLexPdtFilterBlockPrefix = "otlexpdtfilter."; //xp
 
 const std::string BlockBasedTable::kFilterBlockPrefix = "filter.";
 const std::string BlockBasedTable::kFullFilterBlockPrefix = "fullfilter.";

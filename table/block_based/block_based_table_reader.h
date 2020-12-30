@@ -75,6 +75,9 @@ typedef std::vector<std::pair<std::string, std::string>> KVPairBlock;
 // loaded blocks in the memory.
 class BlockBasedTable : public TableReader {
  public:
+
+  static const std::string kOtLexPdtFilterBlockPrefix; //xp
+
   static const std::string kFilterBlockPrefix;
   static const std::string kFullFilterBlockPrefix;
   static const std::string kPartitionedFilterBlockPrefix;

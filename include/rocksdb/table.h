@@ -214,6 +214,12 @@ struct BlockBasedTableOptions {
   // NewBloomFilterPolicy() here.
   std::shared_ptr<const FilterPolicy> filter_policy = nullptr;
 
+
+  //xp
+  // If true, use ot lex pdt as the filter rather than FullFilter
+  bool use_pdt = true;
+//  bool use_pdt = false;
+
   // If true, place whole keys in the filter (not just prefixes).
   // This must generally be true for gets to be efficient.
   bool whole_key_filtering = true;
