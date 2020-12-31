@@ -144,7 +144,7 @@ bool OtLexPdtFilterBlockReader::KeyMayMatch(
     uint64_t block_offset, const bool no_io,
     const Slice* const /*const_ikey_ptr*/, GetContext* get_context,
     BlockCacheLookupContext* lookup_context) {
-      fprintf(stderr,"OtLexPdtFilterBlockReader::KeyMayMatch\n");
+      //fprintf(stderr,"OtLexPdtFilterBlockReader::KeyMayMatch\n");
 #ifdef NDEBUG
   (void)block_offset;
 #endif
@@ -200,7 +200,7 @@ bool OtLexPdtFilterBlockReader::PrefixMayMatch(
 bool OtLexPdtFilterBlockReader::MayMatch(
     const Slice& entry, bool no_io, GetContext* get_context,
     BlockCacheLookupContext* lookup_context) const {
-      fprintf(stderr,"in OtLexPdtFilterBlockReader::MayMatch\n");
+      //fprintf(stderr,"in OtLexPdtFilterBlockReader::MayMatch\n");
   CachableEntry<BlockContents> filter_block;
 //  fprintf(stdout, "DEBUG f95yhc otBlockReader::MayMatch \n");
 
@@ -216,14 +216,14 @@ bool OtLexPdtFilterBlockReader::MayMatch(
   //     filter_block.GetValue()->filter_bits_reader();
 
 
-fprintf(stderr,"in OtLexPdtFilterBlockReader::MayMatch2\n");
+//fprintf(stderr,"in OtLexPdtFilterBlockReader::MayMatch2\n");
   //wp
   std::unique_ptr<FilterBitsReader> filter_bits_reader(
         table()->get_rep()->filter_policy->GetFilterBitsReader(
             filter_block.GetValue()->data));
-fprintf(stderr,"in OtLexPdtFilterBlockReader::MayMatch3\n");
+//fprintf(stderr,"in OtLexPdtFilterBlockReader::MayMatch3\n");
   if (filter_bits_reader) {
-    fprintf(stderr, "DEBUG b9qicb filter_bits_reader is NOT nullptr\n");
+    //fprintf(stderr, "DEBUG b9qicb filter_bits_reader is NOT nullptr\n");
     if (filter_bits_reader->MayMatch(entry)) {
       PERF_COUNTER_ADD(bloom_sst_hit_count, 1);
       return true;
@@ -232,7 +232,7 @@ fprintf(stderr,"in OtLexPdtFilterBlockReader::MayMatch3\n");
       return false;
     }
   }
-  fprintf(stderr, "DEBUG b9qicb filter_bits_reader is nullptr\n");
+  //fprintf(stderr, "DEBUG b9qicb filter_bits_reader is nullptr\n");
   return true;  // remain the same with block_based filter
 }
 

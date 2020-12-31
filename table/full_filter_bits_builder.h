@@ -108,7 +108,7 @@ class OtLexPdtBloomBitsBuilder : public FilterBitsBuilder {
 //            ot_pdt.pub_m_bp_m_bits.size(),
 //            ot_pdt.pub_m_bp_m_size);
 
-ot_pdt.instance();
+//ot_pdt.instance();
     PutIntoCharArray(ot_pdt.pub_m_centroid_path_string,
                      ot_pdt.pub_m_labels,
                      ot_pdt.pub_m_centroid_path_branches,

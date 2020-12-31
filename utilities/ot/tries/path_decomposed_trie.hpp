@@ -159,8 +159,8 @@ struct path_decomposed_trie {
     bp_vector(&pub_m_bp, false, true).swap(m_bp);
     branching_chars_type(pub_m_branching_chars).swap(m_branching_chars);
     labels_pool_type(pub_m_labels).swap(m_labels);
-    fprintf(stderr, "DEBUG g8qr7x m_labels.size(): %lu, m_bp.size(): %lu, m_branching_chars.size():%lu\n",
-            m_labels.size(), m_bp.size(), m_branching_chars.size());
+    // fprintf(stderr, "DEBUG g8qr7x m_labels.size(): %lu, m_bp.size(): %lu, m_branching_chars.size():%lu\n",
+    //         m_labels.size(), m_bp.size(), m_branching_chars.size());
     assert(m_labels.size() == m_bp.size() / 2);
 //    fprintf(stderr, "DEBUG ka17da1 restored ot lex pdt byte size: %lu\n", size()/8);
   }
@@ -469,9 +469,9 @@ struct path_decomposed_trie {
     bp_vector(&pub_m_bp, false, true).swap(m_bp);
     branching_chars_type(pub_m_branching_chars).swap(m_branching_chars);
     labels_pool_type(pub_m_labels).swap(m_labels);
-    fprintf(stderr, "DEBUG g8qr7x m_labels.size(): %lu, m_bp.size()/2: %lu\n", m_labels.size(), m_bp.size()/2);
+    //fprintf(stderr, "DEBUG g8qr7x m_labels.size(): %lu, m_bp.size()/2: %lu\n", m_labels.size(), m_bp.size()/2);
     assert(m_labels.size() == m_bp.size() / 2);
-    fprintf(stderr, "DEBUG ka17da1 restored ot lex pdt byte size: %lu\n", size()/8);
+    //fprintf(stderr, "DEBUG ka17da1 restored ot lex pdt byte size: %lu\n", size()/8);
   }
 
   template <typename Range, typename Adaptor>

@@ -321,7 +321,7 @@ class OtLexPdtBloomBitsReader : public FilterBitsReader {
   }
 
   explicit OtLexPdtBloomBitsReader(const char* buf) {
-    fprintf(stderr,"in OtLexPdtBloomBitsReader\n");
+    //fprintf(stderr,"in OtLexPdtBloomBitsReader\n");
     // construct a ot lex pdt
     // restore essential members from buf
     ot_pdt.pub_m_centroid_path_string.clear();
@@ -340,7 +340,7 @@ class OtLexPdtBloomBitsReader : public FilterBitsReader {
                          fake_num_probes,
                          buf);
           
-    fprintf(stderr,"in OtLexPdtBloomBitsReader2\n");
+    //fprintf(stderr,"in OtLexPdtBloomBitsReader2\n");
 //    fprintf(stdout, "DEBUG uq7zbt in otReader sizes for string,label,branch,char,bit,size:%ld,%ld,%ld,%ld,%ld,%ld\n",
 //            ot_pdt.pub_m_centroid_path_string.size(),
 //            ot_pdt.pub_m_labels.size(),
@@ -370,7 +370,7 @@ class OtLexPdtBloomBitsReader : public FilterBitsReader {
     // init pub_* members, and create a ot lex pdt instance from it
 //        ot_pdt.init_pubs();
 //    auto chrono_start = std::chrono::system_clock::now();
-fprintf(stderr,"in OtLexPdtBloomBitsReader3\n");
+//fprintf(stderr,"in OtLexPdtBloomBitsReader3\n");
     ot_pdt.instance();
     // ot_pdt.instance(ot_pdt.pub_m_centroid_path_string,ot_pdt.pub_m_centroid_path_branches,
     // ot_pdt.get_bp(),
@@ -379,7 +379,7 @@ fprintf(stderr,"in OtLexPdtBloomBitsReader3\n");
 //    std::chrono::microseconds elapsed_us = std::chrono::duration_cast<std::chrono::microseconds>(chrono_end-chrono_start);
 //    std::cout << "DEBUG cor73n ot_pdt.instance() takes " <<
 //              elapsed_us.count() << " us." << std::endl;
-fprintf(stderr,"in OtLexPdtBloomBitsReader4\n");
+//fprintf(stderr,"in OtLexPdtBloomBitsReader4\n");
   }
 
   // No Copy allowed
@@ -497,7 +497,7 @@ fprintf(stderr,"in OtLexPdtBloomBitsReader4\n");
     tmp_fake_num_probes = *pc5;
 
 // uint64_t sssize=pc5-buf+1;
-     fprintf(stderr,"in Recover buf size=%ld\n\n\n",pc5-buf+1);
+     //fprintf(stderr,"in Recover buf size=%ld\n\n\n",pc5-buf+1);
 
 //     fprintf(stderr,"/n/n/n/n/nbuf contents/n");
 //     for(uint64_t i=0;i<sssize;i++)

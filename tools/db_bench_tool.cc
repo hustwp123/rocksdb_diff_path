@@ -2631,6 +2631,11 @@ class Benchmark {
     if (key_size_ > pos - start) {
       memset(pos, '0', key_size_ - (pos - start));
     }
+
+    //    fprintf(stderr, "DEBUG x6402u before refining, key(size %lu): %s\n",
+    //            key->size_, key->data_);
+    key->RefineKeyFormat(true); //xp, transform to [prefix][keys]
+
   }
 
   void GenerateKeyFromIntForSeek(uint64_t v, int64_t num_keys, Slice* key) {
