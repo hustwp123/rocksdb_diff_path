@@ -55,7 +55,7 @@ class OtLexPdtBloomBitsBuilder : public FilterBitsBuilder {
                               key_strings_.end()),
                        key_strings_.end()); //xp, for now simply dedup keys
 
-//    fprintf(stdout, "DEBUG w7zvbg key_strings_.size: %lu\n", key_strings_.size());
+    fprintf(stderr, "DEBUG w7zvbg key_strings_.size: %lu\n", key_strings_.size());
 
     auto chrono_start = std::chrono::system_clock::now();
     ot_pdt.construct_compacted_trie(key_strings_, false); // ot_pdt.pub_ are inited
@@ -107,6 +107,8 @@ class OtLexPdtBloomBitsBuilder : public FilterBitsBuilder {
 //            ot_pdt.pub_m_branching_chars.size(),
 //            ot_pdt.pub_m_bp_m_bits.size(),
 //            ot_pdt.pub_m_bp_m_size);
+
+ot_pdt.instance();
     PutIntoCharArray(ot_pdt.pub_m_centroid_path_string,
                      ot_pdt.pub_m_labels,
                      ot_pdt.pub_m_centroid_path_branches,
@@ -188,10 +190,12 @@ class OtLexPdtBloomBitsBuilder : public FilterBitsBuilder {
                          std::vector<uint64_t>& v5, uint64_t num,
                          char new_impl, char sub_impl, char fake_num_probes,
                          uint64_t& byte_size, char*& buf) {
+                        
 //    byte_size =
 //        (v1.size() + v2.size()) * 2 + v3.size() + v4.size() + v5.size() * 8 + 8;
 //    byte_size += 5 * 4 + 5;  //指明4个vector的size + 5 padding chars
 //
+    fprintf(stderr,"in Put buf size=%ld\n\n\n",byte_size);
     buf = new char[byte_size];
     memset(buf, 0, byte_size);
 
@@ -262,6 +266,13 @@ class OtLexPdtBloomBitsBuilder : public FilterBitsBuilder {
 //                        v3.size() + 4 + v4.size() + 4 + v5.size() * 8 + 8 + 1 + 1 + 1 + 1);
 //    *pc5 = static_cast<char>(0);
 
+
+// fprintf(stderr,"/n/n/n/n/nbuf contents/n");
+//     for(uint64_t i=0;i<byte_size;i++)
+//     {
+//       fprintf(stderr,"%d",buf[i]);
+//     }
+// fprintf(stderr,"\n");
     return buf;
   }
 

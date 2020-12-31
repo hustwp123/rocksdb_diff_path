@@ -516,6 +516,7 @@ struct BlockBasedTable::Rep {
 
   enum class FilterType {
     kNoFilter,
+    kOtLexPdtFilter, //xp
     kFullFilter,
     kBlockFilter,
     kPartitionedFilter,

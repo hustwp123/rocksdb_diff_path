@@ -63,9 +63,13 @@ class OtLexPdtFilterBlockBuilder : public FilterBlockBuilder {
 
   virtual const char* Name() const { return "otlexpdtfilter."; }
   virtual bool IsBlockBased() override { return false; }
-  virtual void StartBlock(uint64_t /*block_offset*/) override {}
+  virtual void StartBlock(uint64_t /*block_offset*/) override {
+    //fprintf(stderr,"OtLexPdtFilterBlockBuilder startBlock\n");
+  }
   virtual void Add(const Slice& key) override;
-  virtual size_t NumAdded() const override { return num_added_; }
+  virtual size_t NumAdded() const override {
+    //fprintf(stderr,"OtLexPdtFilterBlockBuilder NumAdded\n");
+     return num_added_; }
   virtual Slice Finish(const BlockHandle& tmp, Status* status) override;
   using FilterBlockBuilder::Finish;
 

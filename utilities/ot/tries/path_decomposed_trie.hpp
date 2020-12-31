@@ -159,8 +159,8 @@ struct path_decomposed_trie {
     bp_vector(&pub_m_bp, false, true).swap(m_bp);
     branching_chars_type(pub_m_branching_chars).swap(m_branching_chars);
     labels_pool_type(pub_m_labels).swap(m_labels);
-//    fprintf(stderr, "DEBUG g8qr7x m_labels.size(): %lu, m_bp.size(): %lu, m_branching_chars.size():%lu\n",
-//            m_labels.size(), m_bp.size(), m_branching_chars.size());
+    fprintf(stderr, "DEBUG g8qr7x m_labels.size(): %lu, m_bp.size(): %lu, m_branching_chars.size():%lu\n",
+            m_labels.size(), m_bp.size(), m_branching_chars.size());
     assert(m_labels.size() == m_bp.size() / 2);
 //    fprintf(stderr, "DEBUG ka17da1 restored ot lex pdt byte size: %lu\n", size()/8);
   }
@@ -518,6 +518,7 @@ struct path_decomposed_trie {
                         root->m_labels.end());
     pub_m_bp.clone_private_members(root->m_bp); //TODO Deprecated
     pub_m_bp.expose_private(pub_m_bp_m_bits, pub_m_bp_m_size);
+
 //    chrono_end = std::chrono::system_clock::now();
 //    std::chrono::microseconds elapsed2_us = std::chrono::duration_cast<std::chrono::microseconds>(chrono_end-chrono_start);
 //    std::cout << "DEBUG d74gty ot_pdt.build_essential() copy pub_* takes " <<

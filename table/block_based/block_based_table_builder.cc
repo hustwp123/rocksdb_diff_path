@@ -67,16 +67,30 @@ FilterBlockBuilder* CreateFilterBlockBuilder(
     PartitionedIndexBuilder* const p_index_builder) {
   if (table_opt.filter_policy == nullptr) return nullptr;
 
+  fprintf(stderr,"/n/n/n/nbefore test\n");
+  FilterBitsBuilder* filter_bits_builder_test =
+      table_opt.filter_policy->GetFilterBitsBuilder();
+  OtLexPdtFilterBlockBuilder * block_build_test=new OtLexPdtFilterBlockBuilder(filter_bits_builder_test);
+  const char *s="123456786887vh1111111111111111111111111111111111111111111111111111111111111111111111165498798546589798798654546541214";
+  for(int i=0;i<40;i++)
+  {
+    //s[0]=i%30;
+    Slice key(s,i+1);
+    block_build_test->Add(key);
+  }
+  block_build_test->Finish();
+  fprintf(stderr,"after test\n\n\n");
+
   FilterBitsBuilder* filter_bits_builder =
       table_opt.filter_policy->GetFilterBitsBuilder();
   if (filter_bits_builder == nullptr) {
-    printf("filter_bits_builder=null\n");
+    fprintf(stderr,"filter_bits_builder=null\n");
     return new BlockBasedFilterBlockBuilder(mopt.prefix_extractor.get(),
                                             table_opt);
   } else {
-    printf("filter_bits_builder not null\n");
+    fprintf(stderr,"filter_bits_builder not null\n");
     if (table_opt.partition_filters) {
-      printf("partition_filters\n");
+      fprintf(stderr,"partition_filters\n");
       assert(p_index_builder != nullptr);
       // Since after partition cut request from filter builder it takes time
       // until index builder actully cuts the partition, we take the lower bound
@@ -93,10 +107,18 @@ FilterBlockBuilder* CreateFilterBlockBuilder(
           filter_bits_builder, table_opt.index_block_restart_interval,
           use_delta_encoding_for_index_values, p_index_builder, partition_size);
     } else {
-      printf("FullFilterBlockBuilder\n");
-      return new FullFilterBlockBuilder(mopt.prefix_extractor.get(),
+      if(table_opt.use_pdt)
+      {
+        fprintf(stderr,"use pdt\n");
+        return new OtLexPdtFilterBlockBuilder(filter_bits_builder);
+      }
+      else
+      {
+        fprintf(stderr,"FullFilterBlockBuilder\n");
+        return new FullFilterBlockBuilder(mopt.prefix_extractor.get(),
                                         table_opt.whole_key_filtering,
                                         filter_bits_builder);
+      }
     }
   }
 }
@@ -408,7 +430,7 @@ struct BlockBasedTableBuilder::Rep {
         oldest_key_time(_oldest_key_time),
         target_file_size(_target_file_size),
         file_creation_time(_file_creation_time) {
-          printf("\n\n\nin Rep()\n");
+          fprintf(stderr,"\n\n\nin Rep()\n");
     if (table_options.index_type ==
         BlockBasedTableOptions::kTwoLevelIndexSearch) {
       p_index_builder_ = PartitionedIndexBuilder::CreateIndexBuilder(
@@ -855,9 +877,17 @@ void BlockBasedTableBuilder::WriteFilterBlock(
     if (rep_->filter_builder->IsBlockBased()) {
       key = BlockBasedTable::kFilterBlockPrefix;
     } else {
-      key = rep_->table_options.partition_filters
-                ? BlockBasedTable::kPartitionedFilterBlockPrefix
-                : BlockBasedTable::kFullFilterBlockPrefix;
+      if (rep_->table_options.partition_filters) { //xp
+        key = BlockBasedTable::kPartitionedFilterBlockPrefix;
+      }
+      else {
+        if(rep_->table_options.use_pdt) {
+          key = BlockBasedTable::kOtLexPdtFilterBlockPrefix;
+        }
+        else {
+          key = BlockBasedTable::kFullFilterBlockPrefix;
+        }
+      }
     }
     key.append(rep_->table_options.filter_policy->Name());
     meta_index_builder->Add(key, filter_block_handle);

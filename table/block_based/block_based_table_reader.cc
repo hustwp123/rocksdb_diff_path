@@ -1460,17 +1460,24 @@ Status BlockBasedTable::PrefetchIndexAndFilterBlocks(
   // Find filter handle and filter type
   if (rep_->filter_policy) {
     for (auto filter_type :
-         {Rep::FilterType::kFullFilter, Rep::FilterType::kPartitionedFilter,
-          Rep::FilterType::kBlockFilter}) {
+         {Rep::FilterType::kOtLexPdtFilter, Rep::FilterType::kFullFilter,
+          Rep::FilterType::kPartitionedFilter, Rep::FilterType::kBlockFilter}) {
       std::string prefix;
       switch (filter_type) {
+        case Rep::FilterType::kOtLexPdtFilter:
+          fprintf(stderr, "DEBUG iv0167 filter_type kOt %d in PrefetchIndexAndFilterBlocks\n", static_cast<int>(filter_type));
+          prefix = kOtLexPdtFilterBlockPrefix; //xp
+          break;
         case Rep::FilterType::kFullFilter:
+          fprintf(stderr, "DEBUG q81cn filter_type kFull %d in PrefetchIndexAndFilterBlocks\n", static_cast<int>(filter_type));
           prefix = kFullFilterBlockPrefix;
           break;
         case Rep::FilterType::kPartitionedFilter:
+          fprintf(stderr, "DEBUG 34qe4 filter_type kPart %d in PrefetchIndexAndFilterBlocks\n", static_cast<int>(filter_type));
           prefix = kPartitionedFilterBlockPrefix;
           break;
         case Rep::FilterType::kBlockFilter:
+          fprintf(stderr, "DEBUG 6dpqc filter_type kBlk %d in PrefetchIndexAndFilterBlocks\n", static_cast<int>(filter_type));
           prefix = kFilterBlockPrefix;
           break;
         default:
@@ -1481,6 +1488,7 @@ Status BlockBasedTable::PrefetchIndexAndFilterBlocks(
       if (FindMetaBlock(meta_iter, filter_block_key, &rep_->filter_handle)
               .ok()) {
         rep_->filter_type = filter_type;
+        fprintf(stderr, "DEBUG nq0zgh filter_block_key.append(Name()): %s, type: %d\n", rep_->filter_policy->Name(), static_cast<int>(filter_type));
         break;
       }
     }
@@ -1545,6 +1553,27 @@ Status BlockBasedTable::PrefetchIndexAndFilterBlocks(
     auto filter = new_table->CreateFilterBlockReader(
         prefetch_buffer, use_cache, prefetch_filter, pin_filter,
         lookup_context);
+
+    switch (rep_->filter_type) {
+      case Rep::FilterType::kFullFilter:
+      printf("DEBUG j9e7x kFull CreateFilterBlockReader() takes(us) \n");
+        break;
+      case Rep::FilterType::kOtLexPdtFilter:
+      printf("DEBUG j9e7xx kOt CreateFilterBlockReader() takes(us) \n");
+        break;
+      case Rep::FilterType::kBlockFilter:
+      printf("DEBUG j9e7xx kBlock CreateFilterBlockReader() takes(us) \n");
+        break;
+      case Rep::FilterType::kPartitionedFilter:
+      printf("DEBUG j9e7xx kPart CreateFilterBlockReader() takes(us) \n" );
+        break;
+      case Rep::FilterType::kNoFilter:
+      printf("DEBUG j9e7xx kNo CreateFilterBlockReader() takes(us) \n" );
+        break;
+    }
+
+
+
     if (filter) {
       // Refer to the comment above about paritioned indexes always being cached
       if (prefetch_all) {
@@ -1852,15 +1881,24 @@ std::unique_ptr<FilterBlockReader> BlockBasedTable::CreateFilterBlockReader(
 
   switch (filter_type) {
     case Rep::FilterType::kPartitionedFilter:
+    printf("in Create kPartitionedFilter\n");
       return PartitionedFilterBlockReader::Create(
           this, prefetch_buffer, use_cache, prefetch, pin, lookup_context);
 
     case Rep::FilterType::kBlockFilter:
+    printf("in Creat kBlockFilter\n");
       return BlockBasedFilterBlockReader::Create(
           this, prefetch_buffer, use_cache, prefetch, pin, lookup_context);
 
     case Rep::FilterType::kFullFilter:
+    printf("in Create kFullFilter\n");
       return FullFilterBlockReader::Create(this, prefetch_buffer, use_cache,
+                                           prefetch, pin, lookup_context);
+
+    case Rep::FilterType::kOtLexPdtFilter: //xp
+    fprintf(stderr,"in Create kOtLexPdtFilter\n");
+      fprintf(stderr, "DEBUG kzo3i kOt in CreateFilterBlockReader\n");
+      return OtLexPdtFilterBlockReader::Create(this, prefetch_buffer, use_cache,
                                            prefetch, pin, lookup_context);
 
     default:
@@ -3136,9 +3174,11 @@ bool BlockBasedTable::FullFilterKeyMayMatch(
     size_t ts_sz =
         rep_->internal_comparator.user_comparator()->timestamp_size();
     Slice user_key_without_ts = StripTimestampFromUserKey(user_key, ts_sz);
+    //fprintf(stderr,"before filter->KeyMayMatch\n");
     may_match =
         filter->KeyMayMatch(user_key_without_ts, prefix_extractor, kNotValid,
                             no_io, const_ikey_ptr, get_context, lookup_context);
+    //fprintf(stderr,"after filter->KeyMayMatch\n");
   } else if (!read_options.total_order_seek && prefix_extractor &&
              rep_->table_properties->prefix_extractor_name.compare(
                  prefix_extractor->Name()) == 0 &&
@@ -3206,9 +3246,11 @@ Status BlockBasedTable::Get(const ReadOptions& read_options, const Slice& key,
     lookup_context.get_from_user_specified_snapshot =
         read_options.snapshot != nullptr;
   }
+  //fprintf(stderr,"before FullFilterKeyMayMatch\n");
   const bool may_match =
       FullFilterKeyMayMatch(read_options, filter, key, no_io, prefix_extractor,
                             get_context, &lookup_context);
+  //fprintf(stderr,"after FullFilterKeyMayMatch\n");
   if (!may_match) {
     RecordTick(rep_->ioptions.statistics, BLOOM_FILTER_USEFUL);
     PERF_COUNTER_BY_LEVEL_ADD(bloom_filter_useful, 1, rep_->level);
@@ -3782,7 +3824,9 @@ BlockType BlockBasedTable::GetBlockTypeForMetaBlockByName(
     const Slice& meta_block_name) {
   if (meta_block_name.starts_with(kFilterBlockPrefix) ||
       meta_block_name.starts_with(kFullFilterBlockPrefix) ||
-      meta_block_name.starts_with(kPartitionedFilterBlockPrefix)) {
+      meta_block_name.starts_with(kPartitionedFilterBlockPrefix)||
+      meta_block_name.starts_with(kOtLexPdtFilterBlockPrefix)
+      ) {
     return BlockType::kFilter;
   }
 

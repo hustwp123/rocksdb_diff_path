@@ -317,10 +317,11 @@ bool FullFilterBitsReader::HashMayMatch(const uint32_t& hash,
 class OtLexPdtBloomBitsReader : public FilterBitsReader {
  public:
   explicit OtLexPdtBloomBitsReader() {
-//    fprintf(stderr, "DEBUG pqc7a26 init OtLexPdtBloomBitsReader\n");
+    fprintf(stderr, "DEBUG pqc7a26 init OtLexPdtBloomBitsReader\n");
   }
 
   explicit OtLexPdtBloomBitsReader(const char* buf) {
+    fprintf(stderr,"in OtLexPdtBloomBitsReader\n");
     // construct a ot lex pdt
     // restore essential members from buf
     ot_pdt.pub_m_centroid_path_string.clear();
@@ -338,6 +339,8 @@ class OtLexPdtBloomBitsReader : public FilterBitsReader {
                          sub_impl,
                          fake_num_probes,
                          buf);
+          
+    fprintf(stderr,"in OtLexPdtBloomBitsReader2\n");
 //    fprintf(stdout, "DEBUG uq7zbt in otReader sizes for string,label,branch,char,bit,size:%ld,%ld,%ld,%ld,%ld,%ld\n",
 //            ot_pdt.pub_m_centroid_path_string.size(),
 //            ot_pdt.pub_m_labels.size(),
@@ -367,11 +370,16 @@ class OtLexPdtBloomBitsReader : public FilterBitsReader {
     // init pub_* members, and create a ot lex pdt instance from it
 //        ot_pdt.init_pubs();
 //    auto chrono_start = std::chrono::system_clock::now();
+fprintf(stderr,"in OtLexPdtBloomBitsReader3\n");
     ot_pdt.instance();
+    // ot_pdt.instance(ot_pdt.pub_m_centroid_path_string,ot_pdt.pub_m_centroid_path_branches,
+    // ot_pdt.get_bp(),
+    // ot_pdt.pub_m_branching_chars,ot_pdt.pub_m_labels);
 //    auto chrono_end = std::chrono::system_clock::now();
 //    std::chrono::microseconds elapsed_us = std::chrono::duration_cast<std::chrono::microseconds>(chrono_end-chrono_start);
 //    std::cout << "DEBUG cor73n ot_pdt.instance() takes " <<
 //              elapsed_us.count() << " us." << std::endl;
+fprintf(stderr,"in OtLexPdtBloomBitsReader4\n");
   }
 
   // No Copy allowed
@@ -487,6 +495,16 @@ class OtLexPdtBloomBitsReader : public FilterBitsReader {
     tmp_fake_num_probes = *pc4;
     char* pc5 = (char*) (buf + 4 + size1 * 2 + 4 + size2 * 2 + 4 + size3 + 4 + size4 + 4 + size5 * 8 + 8+1+1+1+1);
     tmp_fake_num_probes = *pc5;
+
+// uint64_t sssize=pc5-buf+1;
+     fprintf(stderr,"in Recover buf size=%ld\n\n\n",pc5-buf+1);
+
+//     fprintf(stderr,"/n/n/n/n/nbuf contents/n");
+//     for(uint64_t i=0;i<sssize;i++)
+//     {
+//       fprintf(stderr,"%d",buf[i]);
+//     }
+// fprintf(stderr,"\n");
   }
 
   // be compatible with full filter in GetBloomBitsReader
@@ -508,6 +526,10 @@ class OtLexPdtBloomBitsReader : public FilterBitsReader {
 // An implementation of filter policy
 class BloomFilterPolicy : public FilterPolicy {
  public:
+
+  //wp
+  bool isPdt=false;
+  
   explicit BloomFilterPolicy(int bits_per_key, bool use_block_based_builder)
       : bits_per_key_(bits_per_key), hash_func_(BloomHash),
         use_block_based_builder_(use_block_based_builder) {
@@ -579,12 +601,23 @@ class BloomFilterPolicy : public FilterPolicy {
     if (use_block_based_builder_) {
       return nullptr;
     }
-
-    return new FullFilterBitsBuilder(bits_per_key_, num_probes_);
+    if(isPdt)
+    {
+      return new OtLexPdtBloomBitsBuilder();
+    }
+    else
+    {
+      return new FullFilterBitsBuilder(bits_per_key_, num_probes_);
+    }
   }
 
   FilterBitsReader* GetFilterBitsReader(const Slice& contents) const override {
-    printf("in bloom GetFilterBitsReader\n");
+
+    //fprintf(stderr,"in bloom GetFilterBitsReader\n");
+    if(isPdt)
+    {
+      return new OtLexPdtBloomBitsReader(contents.data());
+    }
     return new FullFilterBitsReader(contents);
   }
 
@@ -612,7 +645,9 @@ class BloomFilterPolicy : public FilterPolicy {
 const FilterPolicy* NewBloomFilterPolicy(int bits_per_key,
                                          bool use_block_based_builder) {
       printf("\n\n\n\nin NewBloomFilterPolicy\n");
-  return new BloomFilterPolicy(bits_per_key, use_block_based_builder);
+  BloomFilterPolicy* p=new BloomFilterPolicy(bits_per_key, use_block_based_builder);
+  p->isPdt=true;
+  return p;
 }
 
 }  // namespace rocksdb

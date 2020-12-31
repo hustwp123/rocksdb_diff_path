@@ -23,7 +23,6 @@ namespace rocksdb {
 
 // DO NOT support prefix
 void OtLexPdtFilterBlockBuilder::Add(const Slice& key) {
-//  fprintf(stderr, "before Add() in Otpdtblockbuilder() wpquc\n");
   AddKey(key);
 }
 
@@ -38,6 +37,7 @@ inline void OtLexPdtFilterBlockBuilder::AddKey(const Slice& key) {
 
 Slice OtLexPdtFilterBlockBuilder::Finish(const BlockHandle& /*tmp*/,
                                      Status* status) {
+  fprintf(stderr,"OtLexPdtFilterBlockBuilder Finish\n");
   // In this impl we ignore BlockHandle
   *status = Status::OK();
   if (num_added_ != 0) {
@@ -144,6 +144,7 @@ bool OtLexPdtFilterBlockReader::KeyMayMatch(
     uint64_t block_offset, const bool no_io,
     const Slice* const /*const_ikey_ptr*/, GetContext* get_context,
     BlockCacheLookupContext* lookup_context) {
+      fprintf(stderr,"OtLexPdtFilterBlockReader::KeyMayMatch\n");
 #ifdef NDEBUG
   (void)block_offset;
 #endif
@@ -158,6 +159,7 @@ std::unique_ptr<FilterBlockReader> OtLexPdtFilterBlockReader::Create(
     const BlockBasedTable* table, FilePrefetchBuffer* prefetch_buffer,
     bool use_cache, bool prefetch, bool pin,
     BlockCacheLookupContext* lookup_context) {
+      fprintf(stderr,"in  Create OtLexPdtFilterBlockReader 1222222222222222 \n");
   assert(table);
   assert(table->get_rep());
   assert(!pin || prefetch);
@@ -171,6 +173,8 @@ std::unique_ptr<FilterBlockReader> OtLexPdtFilterBlockReader::Create(
     if (!s.ok()) {
       return std::unique_ptr<FilterBlockReader>();
     }
+
+    fprintf(stderr,"/n/n/nblock Content size=%ld\n",filter_block.GetValue()->data.size());
 
     if (use_cache && !pin) {
       filter_block.Reset();
@@ -196,6 +200,7 @@ bool OtLexPdtFilterBlockReader::PrefixMayMatch(
 bool OtLexPdtFilterBlockReader::MayMatch(
     const Slice& entry, bool no_io, GetContext* get_context,
     BlockCacheLookupContext* lookup_context) const {
+      fprintf(stderr,"in OtLexPdtFilterBlockReader::MayMatch\n");
   CachableEntry<BlockContents> filter_block;
 //  fprintf(stdout, "DEBUG f95yhc otBlockReader::MayMatch \n");
 
@@ -211,13 +216,14 @@ bool OtLexPdtFilterBlockReader::MayMatch(
   //     filter_block.GetValue()->filter_bits_reader();
 
 
+fprintf(stderr,"in OtLexPdtFilterBlockReader::MayMatch2\n");
   //wp
   std::unique_ptr<FilterBitsReader> filter_bits_reader(
         table()->get_rep()->filter_policy->GetFilterBitsReader(
             filter_block.GetValue()->data));
-
+fprintf(stderr,"in OtLexPdtFilterBlockReader::MayMatch3\n");
   if (filter_bits_reader) {
-//    fprintf(stderr, "DEBUG b9qicb filter_bits_reader is NOT nullptr\n");
+    fprintf(stderr, "DEBUG b9qicb filter_bits_reader is NOT nullptr\n");
     if (filter_bits_reader->MayMatch(entry)) {
       PERF_COUNTER_ADD(bloom_sst_hit_count, 1);
       return true;
@@ -226,6 +232,7 @@ bool OtLexPdtFilterBlockReader::MayMatch(
       return false;
     }
   }
+  fprintf(stderr, "DEBUG b9qicb filter_bits_reader is nullptr\n");
   return true;  // remain the same with block_based filter
 }
 
