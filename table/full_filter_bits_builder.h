@@ -55,14 +55,14 @@ class OtLexPdtBloomBitsBuilder : public FilterBitsBuilder {
                               key_strings_.end()),
                        key_strings_.end()); //xp, for now simply dedup keys
 
-    fprintf(stderr, "DEBUG w7zvbg key_strings_.size: %lu\n", key_strings_.size());
+    //fprintf(stderr, "DEBUG w7zvbg key_strings_.size: %lu\n", key_strings_.size());
 
     auto chrono_start = std::chrono::system_clock::now();
     ot_pdt.construct_compacted_trie(key_strings_, false); // ot_pdt.pub_ are inited
     auto chrono_end = std::chrono::system_clock::now();
     std::chrono::microseconds elapsed_us = std::chrono::duration_cast<std::chrono::microseconds>(chrono_end-chrono_start);
-    std::cout << "DEBUG 3yb6fo Finis() ot_pdt use " << key_strings_.size() << " keys build raw trie takes(us) " <<
-              elapsed_us.count() << std::endl;
+    // std::cout << "DEBUG 3yb6fo Finis() ot_pdt use " << key_strings_.size() << " keys build raw trie takes(us) " <<
+    //           elapsed_us.count() << std::endl;
 
     // get the byte size of key_strings_
     uint64_t ot_lex_pdt_byte_size = CalculateByteSpace();

@@ -37,7 +37,7 @@ inline void OtLexPdtFilterBlockBuilder::AddKey(const Slice& key) {
 
 Slice OtLexPdtFilterBlockBuilder::Finish(const BlockHandle& /*tmp*/,
                                      Status* status) {
-  fprintf(stderr,"OtLexPdtFilterBlockBuilder Finish\n");
+  //fprintf(stderr,"OtLexPdtFilterBlockBuilder Finish\n");
   // In this impl we ignore BlockHandle
   *status = Status::OK();
   if (num_added_ != 0) {
@@ -159,7 +159,6 @@ std::unique_ptr<FilterBlockReader> OtLexPdtFilterBlockReader::Create(
     const BlockBasedTable* table, FilePrefetchBuffer* prefetch_buffer,
     bool use_cache, bool prefetch, bool pin,
     BlockCacheLookupContext* lookup_context) {
-      fprintf(stderr,"in  Create OtLexPdtFilterBlockReader 1222222222222222 \n");
   assert(table);
   assert(table->get_rep());
   assert(!pin || prefetch);

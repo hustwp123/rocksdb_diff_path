@@ -496,15 +496,9 @@ class OtLexPdtBloomBitsReader : public FilterBitsReader {
     char* pc5 = (char*) (buf + 4 + size1 * 2 + 4 + size2 * 2 + 4 + size3 + 4 + size4 + 4 + size5 * 8 + 8+1+1+1+1);
     tmp_fake_num_probes = *pc5;
 
-// uint64_t sssize=pc5-buf+1;
-     //fprintf(stderr,"in Recover buf size=%ld\n\n\n",pc5-buf+1);
+    uint64_t sssize=pc5-buf+1;
+    fprintf(stderr,"in Recover buf size=%ld\n\n\n",pc5-buf+1);
 
-//     fprintf(stderr,"/n/n/n/n/nbuf contents/n");
-//     for(uint64_t i=0;i<sssize;i++)
-//     {
-//       fprintf(stderr,"%d",buf[i]);
-//     }
-// fprintf(stderr,"\n");
   }
 
   // be compatible with full filter in GetBloomBitsReader
@@ -597,7 +591,6 @@ class BloomFilterPolicy : public FilterPolicy {
   }
 
   FilterBitsBuilder* GetFilterBitsBuilder() const override {
-    printf("in bloom GetFilterBitsBuilder\n");
     if (use_block_based_builder_) {
       return nullptr;
     }
@@ -632,7 +625,6 @@ class BloomFilterPolicy : public FilterPolicy {
   const bool use_block_based_builder_;
 
   void initialize() {
-    printf("in bloom initialize\n");
     // We intentionally round down to reduce probing cost a little bit
     num_probes_ = static_cast<size_t>(bits_per_key_ * 0.69);  // 0.69 =~ ln(2)
     if (num_probes_ < 1) num_probes_ = 1;
@@ -644,7 +636,6 @@ class BloomFilterPolicy : public FilterPolicy {
 
 const FilterPolicy* NewBloomFilterPolicy(int bits_per_key,
                                          bool use_block_based_builder) {
-      printf("\n\n\n\nin NewBloomFilterPolicy\n");
   BloomFilterPolicy* p=new BloomFilterPolicy(bits_per_key, use_block_based_builder);
   p->isPdt=true;
   return p;

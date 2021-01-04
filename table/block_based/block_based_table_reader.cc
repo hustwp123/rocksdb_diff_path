@@ -1489,19 +1489,19 @@ Status BlockBasedTable::PrefetchIndexAndFilterBlocks(
       std::string prefix;
       switch (filter_type) {
         case Rep::FilterType::kOtLexPdtFilter:
-          fprintf(stderr, "DEBUG iv0167 filter_type kOt %d in PrefetchIndexAndFilterBlocks\n", static_cast<int>(filter_type));
+          //fprintf(stderr, "DEBUG iv0167 filter_type kOt %d in PrefetchIndexAndFilterBlocks\n", static_cast<int>(filter_type));
           prefix = kOtLexPdtFilterBlockPrefix; //xp
           break;
         case Rep::FilterType::kFullFilter:
-          fprintf(stderr, "DEBUG q81cn filter_type kFull %d in PrefetchIndexAndFilterBlocks\n", static_cast<int>(filter_type));
+          //fprintf(stderr, "DEBUG q81cn filter_type kFull %d in PrefetchIndexAndFilterBlocks\n", static_cast<int>(filter_type));
           prefix = kFullFilterBlockPrefix;
           break;
         case Rep::FilterType::kPartitionedFilter:
-          fprintf(stderr, "DEBUG 34qe4 filter_type kPart %d in PrefetchIndexAndFilterBlocks\n", static_cast<int>(filter_type));
+          //fprintf(stderr, "DEBUG 34qe4 filter_type kPart %d in PrefetchIndexAndFilterBlocks\n", static_cast<int>(filter_type));
           prefix = kPartitionedFilterBlockPrefix;
           break;
         case Rep::FilterType::kBlockFilter:
-          fprintf(stderr, "DEBUG 6dpqc filter_type kBlk %d in PrefetchIndexAndFilterBlocks\n", static_cast<int>(filter_type));
+          //fprintf(stderr, "DEBUG 6dpqc filter_type kBlk %d in PrefetchIndexAndFilterBlocks\n", static_cast<int>(filter_type));
           prefix = kFilterBlockPrefix;
           break;
         default:
@@ -1512,7 +1512,7 @@ Status BlockBasedTable::PrefetchIndexAndFilterBlocks(
       if (FindMetaBlock(meta_iter, filter_block_key, &rep_->filter_handle)
               .ok()) {
         rep_->filter_type = filter_type;
-        fprintf(stderr, "DEBUG nq0zgh filter_block_key.append(Name()): %s, type: %d\n", rep_->filter_policy->Name(), static_cast<int>(filter_type));
+        //fprintf(stderr, "DEBUG nq0zgh filter_block_key.append(Name()): %s, type: %d\n", rep_->filter_policy->Name(), static_cast<int>(filter_type));
         break;
       }
     }
@@ -1580,19 +1580,19 @@ Status BlockBasedTable::PrefetchIndexAndFilterBlocks(
 
     switch (rep_->filter_type) {
       case Rep::FilterType::kFullFilter:
-      printf("DEBUG j9e7x kFull CreateFilterBlockReader() takes(us) \n");
+      //printf("DEBUG j9e7x kFull CreateFilterBlockReader() takes(us) \n");
         break;
       case Rep::FilterType::kOtLexPdtFilter:
-      printf("DEBUG j9e7xx kOt CreateFilterBlockReader() takes(us) \n");
+      //printf("DEBUG j9e7xx kOt CreateFilterBlockReader() takes(us) \n");
         break;
       case Rep::FilterType::kBlockFilter:
-      printf("DEBUG j9e7xx kBlock CreateFilterBlockReader() takes(us) \n");
+      //printf("DEBUG j9e7xx kBlock CreateFilterBlockReader() takes(us) \n");
         break;
       case Rep::FilterType::kPartitionedFilter:
-      printf("DEBUG j9e7xx kPart CreateFilterBlockReader() takes(us) \n" );
+      //printf("DEBUG j9e7xx kPart CreateFilterBlockReader() takes(us) \n" );
         break;
       case Rep::FilterType::kNoFilter:
-      printf("DEBUG j9e7xx kNo CreateFilterBlockReader() takes(us) \n" );
+      //printf("DEBUG j9e7xx kNo CreateFilterBlockReader() takes(us) \n" );
         break;
     }
 
@@ -1908,23 +1908,19 @@ std::unique_ptr<FilterBlockReader> BlockBasedTable::CreateFilterBlockReader(
 
   switch (filter_type) {
     case Rep::FilterType::kPartitionedFilter:
-    printf("in Create kPartitionedFilter\n");
       return PartitionedFilterBlockReader::Create(
           this, prefetch_buffer, use_cache, prefetch, pin, lookup_context);
 
     case Rep::FilterType::kBlockFilter:
-    printf("in Creat kBlockFilter\n");
       return BlockBasedFilterBlockReader::Create(
           this, prefetch_buffer, use_cache, prefetch, pin, lookup_context);
 
     case Rep::FilterType::kFullFilter:
-    printf("in Create kFullFilter\n");
       return FullFilterBlockReader::Create(this, prefetch_buffer, use_cache,
                                            prefetch, pin, lookup_context);
 
     case Rep::FilterType::kOtLexPdtFilter: //xp
-    fprintf(stderr,"in Create kOtLexPdtFilter\n");
-      fprintf(stderr, "DEBUG kzo3i kOt in CreateFilterBlockReader\n");
+      //fprintf(stderr, "DEBUG kzo3i kOt in CreateFilterBlockReader\n");
       return OtLexPdtFilterBlockReader::Create(this, prefetch_buffer, use_cache,
                                            prefetch, pin, lookup_context);
 
