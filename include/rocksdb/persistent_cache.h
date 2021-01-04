@@ -34,7 +34,7 @@ class PersistentCache {
   // data       Page data
   // size       Size of the page
   virtual Status Insert(const Slice& key, const char* data,
-                        const size_t size) = 0;
+                        const size_t size, bool is_meta_block=false) = 0;
 
   // Lookup page cache by page identifier
   //

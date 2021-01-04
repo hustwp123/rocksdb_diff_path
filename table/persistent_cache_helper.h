@@ -22,12 +22,12 @@ class PersistentCacheHelper {
   // insert block into raw page cache
   static void InsertRawPage(const PersistentCacheOptions& cache_options,
                             const BlockHandle& handle, const char* data,
-                            const size_t size);
+                            const size_t size,bool is_meta_block=false);
 
   // insert block into uncompressed cache
   static void InsertUncompressedPage(
       const PersistentCacheOptions& cache_options, const BlockHandle& handle,
-      const BlockContents& contents);
+      const BlockContents& contents,bool is_meta_block=false);
 
   // lookup block from raw page cacge
   static Status LookupRawPage(const PersistentCacheOptions& cache_options,

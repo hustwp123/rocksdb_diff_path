@@ -75,6 +75,9 @@ typedef std::vector<std::pair<std::string, std::string>> KVPairBlock;
 // loaded blocks in the memory.
 class BlockBasedTable : public TableReader {
  public:
+
+  static const std::string kOtLexPdtFilterBlockPrefix; //xp
+
   static const std::string kFilterBlockPrefix;
   static const std::string kFullFilterBlockPrefix;
   static const std::string kPartitionedFilterBlockPrefix;
@@ -287,7 +290,7 @@ class BlockBasedTable : public TableReader {
       const BlockHandle& handle, const UncompressionDict& uncompression_dict,
       CachableEntry<TBlocklike>* block_entry, BlockType block_type,
       GetContext* get_context, BlockCacheLookupContext* lookup_context,
-      BlockContents* contents) const;
+      BlockContents* contents,bool is_meta_block=false) const;
 
   // Similar to the above, with one crucial difference: it will retrieve the
   // block from the file even if there are no caches configured (assuming the
@@ -299,7 +302,7 @@ class BlockBasedTable : public TableReader {
                        CachableEntry<TBlocklike>* block_entry,
                        BlockType block_type, GetContext* get_context,
                        BlockCacheLookupContext* lookup_context,
-                       bool for_compaction, bool use_cache) const;
+                       bool for_compaction, bool use_cache,bool is_meta_block=false) const;
 
   Status GetDataBlockFromCache(
       const ReadOptions& ro, const BlockHandle& handle,
@@ -513,6 +516,7 @@ struct BlockBasedTable::Rep {
 
   enum class FilterType {
     kNoFilter,
+    kOtLexPdtFilter, //xp
     kFullFilter,
     kBlockFilter,
     kPartitionedFilter,

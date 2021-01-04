@@ -11,7 +11,7 @@ namespace rocksdb {
 
 void PersistentCacheHelper::InsertRawPage(
     const PersistentCacheOptions& cache_options, const BlockHandle& handle,
-    const char* data, const size_t size) {
+    const char* data, const size_t size,bool is_meta_block) {
   assert(cache_options.persistent_cache);
   assert(cache_options.persistent_cache->IsCompressed());
 
@@ -21,12 +21,12 @@ void PersistentCacheHelper::InsertRawPage(
                                           cache_options.key_prefix.size(),
                                           handle, cache_key);
   // insert content to cache
-  cache_options.persistent_cache->Insert(key, data, size);
+  cache_options.persistent_cache->Insert(key, data, size,is_meta_block);
 }
 
 void PersistentCacheHelper::InsertUncompressedPage(
     const PersistentCacheOptions& cache_options, const BlockHandle& handle,
-    const BlockContents& contents) {
+    const BlockContents& contents,bool is_meta_block) {
   assert(cache_options.persistent_cache);
   assert(!cache_options.persistent_cache->IsCompressed());
   // Precondition:
@@ -40,7 +40,7 @@ void PersistentCacheHelper::InsertUncompressedPage(
                                           handle, cache_key);
   // insert block contents to page cache
   cache_options.persistent_cache->Insert(key, contents.data.data(),
-                                         contents.data.size());
+                                         contents.data.size(),is_meta_block);
 }
 
 Status PersistentCacheHelper::LookupRawPage(

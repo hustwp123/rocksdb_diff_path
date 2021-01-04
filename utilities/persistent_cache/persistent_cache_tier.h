@@ -243,7 +243,7 @@ class PersistentCacheTier : public PersistentCache {
   virtual Status Close();
 
   // Reserve space up to 'size' bytes
-  virtual bool Reserve(const size_t size);
+  virtual bool Reserve(const size_t size, bool is_meta_block=false);
 
   // Erase a key from the cache
   virtual bool Erase(const Slice& key);
@@ -255,7 +255,7 @@ class PersistentCacheTier : public PersistentCache {
 
   // Insert to page cache
   virtual Status Insert(const Slice& page_key, const char* data,
-                        const size_t size) override = 0;
+                        const size_t size, bool is_meta_block=false) override = 0;
 
   // Lookup page cache by page identifier
   virtual Status Lookup(const Slice& page_key, std::unique_ptr<char[]>* data,
@@ -300,7 +300,7 @@ class PersistentTieredCache : public PersistentCacheTier {
   std::string PrintStats() override;
   PersistentCache::StatsType Stats() override;
   Status Insert(const Slice& page_key, const char* data,
-                const size_t size) override;
+                const size_t size,bool is_meta_block=false) override;
   Status Lookup(const Slice& page_key, std::unique_ptr<char[]>* data,
                 size_t* size) override;
   bool IsCompressed() override;

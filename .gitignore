@@ -1,5 +1,7 @@
 make_config.mk
 
+cmake-build-debug/
+
 *.a
 *.arc
 *.d

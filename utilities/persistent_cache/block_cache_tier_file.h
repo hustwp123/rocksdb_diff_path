@@ -254,6 +254,12 @@ class WriteableCacheFile : public RandomAccessCacheFile {
 //
 class ThreadedWriter : public Writer {
  public:
+
+  void SetIsTableFile(bool f)
+  {
+    is_table_file=f;
+  }
+
   // Representation of IO to device
   struct IO {
     explicit IO(const bool signal) : signal_(signal) {}
@@ -288,6 +294,8 @@ class ThreadedWriter : public Writer {
   const size_t io_size_ = 0;
   BoundedQueue<IO> q_;
   std::vector<port::Thread> threads_;
+
+  bool is_table_file=false;
 };
 
 }  // namespace rocksdb

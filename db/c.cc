@@ -3045,6 +3045,7 @@ rocksdb_filterpolicy_t* rocksdb_filterpolicy_create_bloom_format(int bits_per_ke
     static void DoNothing(void*) { }
   };
   Wrapper* wrapper = new Wrapper;
+  printf("in rocksdb_filterpolicy_create_bloom_format\n");
   wrapper->rep_ = NewBloomFilterPolicy(bits_per_key, original_format);
   wrapper->state_ = nullptr;
   wrapper->delete_filter_ = nullptr;

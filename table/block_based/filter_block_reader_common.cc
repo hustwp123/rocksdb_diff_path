@@ -29,7 +29,7 @@ Status FilterBlockReaderCommon<TBlocklike>::ReadFilterBlock(
       table->RetrieveBlock(prefetch_buffer, read_options, rep->filter_handle,
                            UncompressionDict::GetEmptyDict(), filter_block,
                            BlockType::kFilter, get_context, lookup_context,
-                           /* for_compaction */ false, use_cache);
+                           /* for_compaction */ false, use_cache,true);
 
   return s;
 }
@@ -96,5 +96,6 @@ size_t FilterBlockReaderCommon<TBlocklike>::ApproximateFilterBlockMemoryUsage()
 // This makes it possible to keep the template definitions in the .cc file.
 template class FilterBlockReaderCommon<BlockContents>;
 template class FilterBlockReaderCommon<Block>;
+template class FilterBlockReaderCommon<ParsedFullFilterBlock>;
 
 }  // namespace rocksdb

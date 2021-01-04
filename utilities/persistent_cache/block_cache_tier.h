@@ -46,7 +46,13 @@ class BlockCacheTier : public PersistentCacheTier {
       : opt_(opt),
         insert_ops_(static_cast<size_t>(opt_.max_write_pipeline_backlog_size)),
         buffer_allocator_(opt.write_buffer_size, opt.write_buffer_count()),
-        writer_(this, opt_.writer_qdepth, static_cast<size_t>(opt_.writer_dispatch_size)) {
+        writer_(this, opt_.writer_qdepth, static_cast<size_t>(opt_.writer_dispatch_size)),
+        //for meta block
+        table_buffer_allocator_(opt.write_buffer_size, opt.write_buffer_count()),
+        table_writer_(this, opt_.writer_qdepth, static_cast<size_t>(opt_.writer_dispatch_size)) 
+
+  {
+    table_writer_.SetIsTableFile(true);
     Info(opt_.log, "Initializing allocator. size=%d B count=%" ROCKSDB_PRIszt,
          opt_.write_buffer_size, opt_.write_buffer_count());
   }
@@ -57,13 +63,13 @@ class BlockCacheTier : public PersistentCacheTier {
     assert(!insert_th_.joinable());
   }
 
-  Status Insert(const Slice& key, const char* data, const size_t size) override;
+  Status Insert(const Slice& key, const char* data, const size_t size, bool is_meta_block=false) override;
   Status Lookup(const Slice& key, std::unique_ptr<char[]>* data,
                 size_t* size) override;
   Status Open() override;
   Status Close() override;
   bool Erase(const Slice& key) override;
-  bool Reserve(const size_t size) override;
+  bool Reserve(const size_t size,bool is_meta_block=false) override;
 
   bool IsCompressed() override { return opt_.is_compressed; }
 
@@ -87,8 +93,8 @@ class BlockCacheTier : public PersistentCacheTier {
   // Pipelined operation
   struct InsertOp {
     explicit InsertOp(const bool signal) : signal_(signal) {}
-    explicit InsertOp(std::string&& key, const std::string& data)
-        : key_(std::move(key)), data_(data) {}
+    explicit InsertOp(std::string&& key, const std::string& data,bool is_meta_block=false)
+        : key_(std::move(key)), data_(data),is_meta_block_(is_meta_block) {}
     ~InsertOp() {}
 
     InsertOp() = delete;
@@ -101,18 +107,27 @@ class BlockCacheTier : public PersistentCacheTier {
     std::string key_;
     std::string data_;
     bool signal_ = false;  // signal to request processing thread to exit
+
+    bool is_meta_block_=false;
   };
 
   // entry point for insert thread
   void InsertMain();
   // insert implementation
-  Status InsertImpl(const Slice& key, const Slice& data);
+  Status InsertImpl(const Slice& key, const Slice& data,bool is_meta_block=false);
   // Create a new cache file
   Status NewCacheFile();
+
+  // Create a new table_cache file
+  Status NewTableCacheFile();
+
   // Get cache directory path
   std::string GetCachePath() const { return opt_.path + "/cache"; }
   // Cleanup folder
   Status CleanupCacheFolder(const std::string& folder);
+
+  //Get table_cache directory path
+  std::string GetTableCachePath() const { return opt_.path + "/table_cache"; }
 
   // Statistics
   struct Statistics {
@@ -149,6 +164,14 @@ class BlockCacheTier : public PersistentCacheTier {
   BlockCacheTierMetadata metadata_;             // Cache meta data manager
   std::atomic<uint64_t> size_{0};               // Size of the cache
   Statistics stats_;                                 // Statistics
+
+
+  uint32_t table_writer_cache_id_ = 0;
+  WriteableCacheFile* table_cache_file_ = nullptr;
+  CacheWriteBufferAllocator table_buffer_allocator_;
+  ThreadedWriter table_writer_;
+  BlockCacheTierMetadata table_metadata_;
+  std::atomic<uint64_t> table_size_{0};
 };
 
 }  // namespace rocksdb

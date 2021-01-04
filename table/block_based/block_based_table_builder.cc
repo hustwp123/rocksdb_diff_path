@@ -90,9 +90,18 @@ FilterBlockBuilder* CreateFilterBlockBuilder(
           filter_bits_builder, table_opt.index_block_restart_interval,
           use_delta_encoding_for_index_values, p_index_builder, partition_size);
     } else {
-      return new FullFilterBlockBuilder(mopt.prefix_extractor.get(),
+      if(table_opt.use_pdt)
+      {
+        //fprintf(stderr,"use pdt\n");
+        return new OtLexPdtFilterBlockBuilder(filter_bits_builder);
+      }
+      else
+      {
+        //fprintf(stderr,"FullFilterBlockBuilder\n");
+        return new FullFilterBlockBuilder(mopt.prefix_extractor.get(),
                                         table_opt.whole_key_filtering,
                                         filter_bits_builder);
+      }
     }
   }
 }
@@ -404,6 +413,7 @@ struct BlockBasedTableBuilder::Rep {
         oldest_key_time(_oldest_key_time),
         target_file_size(_target_file_size),
         file_creation_time(_file_creation_time) {
+          //fprintf(stderr,"\n\n\nin Rep()\n");
     if (table_options.index_type ==
         BlockBasedTableOptions::kTwoLevelIndexSearch) {
       p_index_builder_ = PartitionedIndexBuilder::CreateIndexBuilder(
@@ -850,9 +860,17 @@ void BlockBasedTableBuilder::WriteFilterBlock(
     if (rep_->filter_builder->IsBlockBased()) {
       key = BlockBasedTable::kFilterBlockPrefix;
     } else {
-      key = rep_->table_options.partition_filters
-                ? BlockBasedTable::kPartitionedFilterBlockPrefix
-                : BlockBasedTable::kFullFilterBlockPrefix;
+      if (rep_->table_options.partition_filters) { //xp
+        key = BlockBasedTable::kPartitionedFilterBlockPrefix;
+      }
+      else {
+        if(rep_->table_options.use_pdt) {
+          key = BlockBasedTable::kOtLexPdtFilterBlockPrefix;
+        }
+        else {
+          key = BlockBasedTable::kFullFilterBlockPrefix;
+        }
+      }
     }
     key.append(rep_->table_options.filter_policy->Name());
     meta_index_builder->Add(key, filter_block_handle);
@@ -1187,6 +1205,8 @@ TableProperties BlockBasedTableBuilder::GetTableProperties() const {
   }
   return ret;
 }
+
+const std::string BlockBasedTable::kOtLexPdtFilterBlockPrefix = "otlexpdtfilter."; //xp
 
 const std::string BlockBasedTable::kFilterBlockPrefix = "filter.";
 const std::string BlockBasedTable::kFullFilterBlockPrefix = "fullfilter.";

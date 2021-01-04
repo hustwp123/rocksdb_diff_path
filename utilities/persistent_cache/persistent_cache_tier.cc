@@ -70,7 +70,7 @@ Status PersistentCacheTier::Close() {
   return Status::OK();
 }
 
-bool PersistentCacheTier::Reserve(const size_t /*size*/) {
+bool PersistentCacheTier::Reserve(const size_t /*size*/,bool) {
   // default implementation is a pass through
   return true;
 }
@@ -134,9 +134,9 @@ std::string PersistentTieredCache::PrintStats() {
 }
 
 Status PersistentTieredCache::Insert(const Slice& page_key, const char* data,
-                                     const size_t size) {
+                                     const size_t size,bool is_meta_block) {
   assert(!tiers_.empty());
-  return tiers_.front()->Insert(page_key, data, size);
+  return tiers_.front()->Insert(page_key, data, size,is_meta_block);
 }
 
 Status PersistentTieredCache::Lookup(const Slice& page_key,

@@ -363,7 +363,9 @@ Status TableCache::Get(const ReadOptions& options,
     }
     if (s.ok()) {
       get_context->SetReplayLog(row_cache_entry);  // nullptr if no cache.
+      //fprintf(stderr,"in table Cache get\n");
       s = t->Get(options, k, get_context, prefix_extractor, skip_filters);
+      //fprintf(stderr,"after table Cache get\n");
       get_context->SetReplayLog(nullptr);
     } else if (options.read_tier == kBlockCacheTier && s.IsIncomplete()) {
       // Couldn't find Table in cache but treat as kFound if no_io set

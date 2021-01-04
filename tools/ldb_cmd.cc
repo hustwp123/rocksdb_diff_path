@@ -572,6 +572,7 @@ Options LDBCommand::PrepareOptionsForOpenDB() {
   if (ParseIntOption(option_map_, ARG_BLOOM_BITS, bits, exec_state_)) {
     if (bits > 0) {
       use_table_options = true;
+      printf("PrepareOptionsForOpenDB\n");
       table_options.filter_policy.reset(NewBloomFilterPolicy(bits));
     } else {
       exec_state_ =

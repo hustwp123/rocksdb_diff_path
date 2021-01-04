@@ -225,6 +225,10 @@ inline CompressionType get_block_compression_type(const char* block_data,
   return static_cast<CompressionType>(block_data[block_size]);
 }
 
+
+
+
+
 // Represents the contents of a block read from an SST file. Depending on how
 // it's created, it may or may not own the actual block bytes. As an example,
 // BlockContents objects representing data read from mmapped files only point
@@ -299,6 +303,39 @@ struct BlockContents {
     return *this;
   }
 };
+
+
+
+//wp
+// The sharable/cachable part of the full filter.
+class ParsedFullFilterBlock {
+ public:
+  ParsedFullFilterBlock(const FilterPolicy* filter_policy,
+                        BlockContents&& contents)
+    : block_contents_(std::move(contents)),
+      filter_bits_reader_(
+          !block_contents_.data.empty()
+              ? filter_policy->GetFilterBitsReader(block_contents_.data)
+              : nullptr) {}
+  ~ParsedFullFilterBlock() = default;;
+
+  FilterBitsReader* filter_bits_reader() const {
+    return filter_bits_reader_.get();
+  }
+
+  // TODO: consider memory usage of the FilterBitsReader
+  size_t ApproximateMemoryUsage() const {
+    return block_contents_.ApproximateMemoryUsage();
+  }
+
+  bool own_bytes() const { return block_contents_.own_bytes(); }
+
+ private:
+  BlockContents block_contents_;
+  std::unique_ptr<FilterBitsReader> filter_bits_reader_;
+};
+
+
 
 // Read the block identified by "handle" from "file".  On failure
 // return non-OK.  On success fill *result and return OK.

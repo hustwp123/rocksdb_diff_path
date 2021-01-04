@@ -164,6 +164,12 @@ BlockBasedTableFactory::BlockBasedTableFactory(
     table_options_.flush_block_policy_factory.reset(
         new FlushBlockBySizePolicyFactory());
   }
+  //wp//
+  if(!table_options_.no_block_cache)
+  {
+    //table_options_.cache_index_and_filter_blocks=true; //xp
+    table_options_.cache_index_and_filter_blocks=false; //xp
+  }
   if (table_options_.no_block_cache) {
     table_options_.block_cache.reset();
   } else if (table_options_.block_cache == nullptr) {
@@ -514,6 +520,7 @@ std::string ParseBlockBasedTableOption(const std::string& name,
           ParseInt(trim(value.substr(kName.size(), pos - kName.size())));
       bool use_block_based_builder =
           ParseBoolean("use_block_based_builder", trim(value.substr(pos + 1)));
+          printf("\n\n\n\nbefore NewBloomFilterPolicy use_block_based_builder=%d\n",use_block_based_builder);
       new_options->filter_policy.reset(
           NewBloomFilterPolicy(bits_per_key, use_block_based_builder));
       return "";

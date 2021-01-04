@@ -349,6 +349,7 @@ Options DBTestBase::GetDefaultOptions() {
 Options DBTestBase::GetOptions(
     int option_config, const Options& default_options,
     const anon::OptionsOverride& options_override) const {
+      printf("in GetOptions\n");
   // this redundant copy is to minimize code change w/o having lint error.
   Options options = default_options;
   BlockBasedTableOptions table_options;

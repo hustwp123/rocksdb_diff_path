@@ -560,7 +560,7 @@ void ThreadedWriter::ThreadMain() {
     }
 
     // Reserve space for writing the buffer
-    while (!cache_->Reserve(io.buf_->Used())) {
+    while (!cache_->Reserve(io.buf_->Used(),is_table_file)) {
       // We can fail to reserve space if every file in the system
       // is being currently accessed
       /* sleep override */

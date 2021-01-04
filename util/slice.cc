@@ -170,6 +170,50 @@ std::string Slice::ToString(bool hex) const {
   }
 }
 
+// xp
+// since prefix and suffix are meaningless, reformat keys
+// from db_bench generated key chars
+// [...prefix...][useful_chars][...suffix...]
+// to the common
+// [...paddings...][useful_chars]
+bool Slice::RefineKeyFormat(bool x) const {
+  assert(size_ >= 8);
+
+  unsigned char padding = 'R'; // arbitrary char as you like but 0x00
+  char* data_start_ = const_cast<char*>(data_);
+  size_t cur_ = 0;
+
+  unsigned char good_key_chars[8];
+  mempcpy(good_key_chars, data_, 8); // meaningful key chars
+//  fprintf(stderr, "DEBUG kw02yf key_size: %lu, copied good_key_chars: ", size_);
+  for (int j = 0; j < 8; ++j) {
+    if (0 == good_key_chars[j]) {
+      good_key_chars[j] = padding; //xp, replacing char 0x00 as you like
+    }
+//    fprintf(stderr, "%d,", good_key_chars[j]);
+  }
+//  fprintf(stderr, "\n");
+
+  if (size_ > 8) {
+    for (cur_ = 0; cur_ < size_ - 8; ++cur_) {
+      data_start_[cur_] = padding;
+    }
+  }
+  for(int i = 0; cur_ < size_ && i < 8; cur_++, i++) {
+    data_start_[cur_] = good_key_chars[i];
+  }
+
+//  fprintf(stderr, "DEBUG b264s2 refined key: ");
+//  for (size_t i = 0; i < size_; ++i) {
+//    fprintf(stderr, "%d", data_[i]);
+//  }
+//  fprintf(stderr, "\n");
+  return true;
+}
+
+
+
+
 // Originally from rocksdb/utilities/ldb_cmd.h
 bool Slice::DecodeHex(std::string* result) const {
   std::string::size_type len = size_;
